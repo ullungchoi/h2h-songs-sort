@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>하투하 노래 소트(~Moonride)</title>
+<script>
+var namMember = new Array(
+  "The Chase",
+  "Butterflies",
+  "STYLE",
+  "Pretty Please",
+  "FOCUS",
+  "Apple Pie",
+  "Flutter",
+  "Blue Moon",
+  "RUDE!",
+  "Lemon Tang",
+  "15-LOVE",
+  "처음투성이 (Baby Steps)",
+  "heart emoji (♡)",
+  "Secret Recipe",
+  "Moonride"
+);
+
+var runs = [];
+var pairs = [];
+var pairIndex = 0;
+var currentPair = null;
+var equal = [];
+var numQuestion = 1;
+var totalQuestion = 0;
+var finishSize = 0;
+var finishFlag = 0;
+var resultOrder = [];
+
+function initList() {
+  var i;
+  runs = [];
+  equal = [];
+  resultOrder = [];
+  pairs = [];
+  pairIndex = 0;
+  currentPair = null;
+  numQuestion = 1;
+  finishSize = 0;
+  finishFlag = 0;
+
+  for (i = 0; i < namMember.length; i++) {
+    runs.push([i]);
+    equal[i] = -1;
+  }
+
+  totalQuestion = countQuestions(namMember.length);
+  makePairs();
+}
+
+function countQuestions(length) {
+  var total = 0;
+  var sizes = [];
+  var next = [];
+  var i;
+
+  for (i = 0; i < length; i++) sizes.push(1);
+
+  while (sizes.length > 1) {
+    next = [];
+    for (i = 0; i < sizes.length; i += 2) {
+      if (i + 1 < sizes.length) {
+        total += sizes[i] + sizes[i + 1] - 1;
+        next.push(sizes[i] + sizes[i + 1]);
+      } else {
+        next.push(sizes[i]);
+      }
+    }
+    sizes = next;
+  }
+  return total;
+}
+
+function makePairs() {
+  var i;
+  var nextRuns = [];
+
+  if (runs.length <= 1) {
+    resultOrder = runs[0].slice(0);
+    showResult();
+    finishFlag = 1;
+    return;
+  }
+
+  pairs = [];
+  for (i = 0; i < runs.length; i += 2) {
+    if (i + 1 < runs.length) {
+      pairs.push({ left: runs[i], right: runs[i + 1], a: 0, b: 0, merged: [] });
+    } else {
+      nextRuns.push(runs[i]);
+    }
+  }
+
+  pairIndex = 0;
+  currentPair = null;
+  for (i = 0; i < nextRuns.length; i++) pairs.push({ single: nextRuns[i] });
+  showNextPair();
+}
+
+function showNextPair() {
+  var job;
+  var i;
+
+  if (pairIndex >= pairs.length) {
+    runs = [];
+    for (i = 0; i < pairs.length; i++) {
+      if (pairs[i].single) runs.push(pairs[i].single);
+      else runs.push(pairs[i].merged);
+    }
+    makePairs();
+    return;
+  }
+
+  job = pairs[pairIndex];
+  if (job.single) {
+    finishSize += job.single.length;
+    pairIndex++;
+    showNextPair();
+    return;
+  }
+
+  currentPair = job;
+  showImage();
+}
+
+function sortList(flag) {
+  var job = currentPair;
+  var selected;
+  var i;
+
+  if (finishFlag || !job) return;
+
+  if (flag < 0) {
+    selected = job.left[job.a++];
+    job.merged.push(selected);
+  } else if (flag > 0) {
+    selected = job.right[job.b++];
+    job.merged.push(selected);
+  } else {
+    selected = job.left[job.a++];
+    job.merged.push(selected);
+    equal[selected] = job.right[job.b];
+    job.merged.push(job.right[job.b++]);
+  }
+
+  finishSize++;
+  numQuestion++;
+
+  if (job.a >= job.left.length) {
+    while (job.b < job.right.length) {
+      job.merged.push(job.right[job.b++]);
+      finishSize++;
+    }
+    pairIndex++;
+    showNextPair();
+    return;
+  }
+
+  if (job.b >= job.right.length) {
+    while (job.a < job.left.length) {
+      job.merged.push(job.left[job.a++]);
+      finishSize++;
+    }
+    pairIndex++;
+    showNextPair();
+    return;
+  }
+
+  showImage();
+}
+
+function showImage() {
+  var left = currentPair.left[currentPair.a];
+  var right = currentPair.right[currentPair.b];
+  var percent = Math.floor(Math.min(finishSize / totalQuestion * 100, 99));
+
+  document.getElementById("battleNumber").innerHTML =
+    "Battle No." + numQuestion + "<br>" + percent + "% sorted.";
+  document.getElementById("leftField").innerHTML = toNameFace(left);
+  document.getElementById("rightField").innerHTML = toNameFace(right);
+}
+
+function showResult() {
+  var ranking = 1;
+  var sameRank = 1;
+  var str = "";
+  var i;
+
+  str += '<table style="width:200px; font-size:12px; line-height:120%; margin-left:auto; margin-right:auto; border:1px solid #000; border-collapse:collapse" align="center">';
+  str += '<tr><td style="color:#fff; background-color:#000; text-align:center;">순위</td><td style="color:#fff; background-color:#000; text-align:center;">이름</td></tr>';
+
+  for (i = 0; i < resultOrder.length; i++) {
+    str += '<tr><td style="border:1px solid #000; text-align:right; padding-right:5px;">' + ranking + '</td>';
+    str += '<td style="border:1px solid #000; padding-left:5px;">' + namMember[resultOrder[i]] + '</td></tr>';
+
+    if (i < resultOrder.length - 1) {
+      if (equal[resultOrder[i]] === resultOrder[i + 1]) {
+        sameRank++;
+      } else {
+        ranking += sameRank;
+        sameRank = 1;
+      }
+    }
+  }
+
+  str += '</table>';
+  document.getElementById("resultField").innerHTML = str;
+  document.getElementById("battleNumber").innerHTML = "정렬 완료";
+}
+
+function toNameFace(n) {
+  return namMember[n];
+}
+
+function restart() {
+  document.getElementById("resultField").innerHTML = "";
+  initList();
+}
+
+window.onload = function() {
+  initList();
+};
+</script>
+<style>
+#mainTable {
+  font-size: 12px;
+  font-family: Arial, "돋움", sans-serif;
+  text-align: center;
+  vertical-align: middle;
+  width: 410px;
+  margin-left: auto;
+  margin-right: auto;
+  border-collapse: separate;
+  border-spacing: 10px 5px;
+}
+#leftField,
+#rightField {
+  width: 120px;
+  height: 150px;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+.middleField {
+  width: 120px;
+  height: 70px;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+#resultField {
+  text-align: center;
+}
+#restartButton {
+  display: block;
+  margin: 15px auto;
+}
+</style>
+</head>
+<body text="#000000" bgcolor="#ffffff" link="#0099ff" vlink="#0099ff" alink="#0099ff">
+<table id="mainTable" align="center">
+  <tr>
+    <td id="battleNumber" colspan="3" style="padding-bottom:10px;"><p>&nbsp;</p></td>
+  </tr>
+  <tr>
+    <td id="leftField" onclick="if (finishFlag === 0) sortList(-1);" rowspan="2">&nbsp;</td>
+    <td class="middleField" onclick="if (finishFlag === 0) sortList(0);">둘 다 좋아</td>
+    <td id="rightField" onclick="if (finishFlag === 0) sortList(1);" rowspan="2">&nbsp;</td>
+  </tr>
+  <tr>
+    <td class="middleField" onclick="if (finishFlag === 0) sortList(0);">모르겠다</td>
+  </tr>
+</table>
+
+<div id="resultField"></div>
+<button id="restartButton" type="button" onclick="restart();">다시 하기</button>
+</body>
+</html>
